@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZIP Code Territory Map - Real Boundaries</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; background: #f5f5f5; }
+        .container { max-width: 100%; padding: 15px; }
+        h1 { color: #1a1a1a; margin-bottom: 15px; text-align: center; font-size: 24px; }
+        .controls { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 15px; max-width: 1600px; margin-left: auto; margin-right: auto; }
+        .file-upload-area { border: 3px dashed #2196F3; border-radius: 8px; padding: 30px; text-align: center; background: #f8f9fa; margin-bottom: 15px; cursor: pointer; transition: all 0.3s; }
+        .file-upload-area:hover { border-color: #1976D2; background: #e3f2fd; }
+        .file-upload-area input[type="file"] { display: none; }
+        .upload-icon { font-size: 48px; margin-bottom: 10px; }
+        .upload-button { background: #2196F3; color: white; padding: 12px 24px; border-radius: 6px; border: none; cursor: pointer; font-size: 15px; font-weight: 600; display: inline-block; margin-top: 10px; }
+        button.clear { background: #f44336; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 600; margin-right: 10px; }
+        .instructions { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; }
+        .instructions h3 { margin-bottom: 12px; font-size: 18px; }
+        .instructions ul { margin-left: 20px; margin-top: 8px; }
+        .instructions li { margin: 5px 0; line-height: 1.5; }
+        #map { width: 100%; height: 750px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .search-box { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 1000; background: white; padding: 8px 12px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); width: 450px; max-width: 90%; pointer-events: auto; }
+        .search-box input { width: 100%; padding: 14px 16px; border: 2px solid #2196F3; border-radius: 6px; font-size: 16px; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .search-box input:focus { border-color: #1976D2; box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2); }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 15px; max-width: 1600px; margin-left: auto; margin-right: auto; }
+        .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; }
+        .stat-card h3 { font-size: 13px; color: #666; margin-bottom: 8px; text-transform: uppercase; }
+        .stat-card .number { font-size: 32px; font-weight: 700; color: #2196F3; }
+        .legend { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 1600px; margin: 0 auto; }
+        .legend h3 { margin-bottom: 15px; font-size: 18px; }
+        .legend-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+        .legend-item { display: flex; align-items: center; padding: 12px; background: #f9f9f9; border-radius: 6px; }
+        .legend-item .color-box { width: 36px; height: 36px; border-radius: 6px; margin-right: 12px; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+        .message { padding: 14px 18px; margin: 12px 0; border-radius: 6px; font-weight: 500; }
+        .message.error { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
+        .message.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4CAF50; }
+        .message.info { background: #e3f2fd; color: #1565c0; border-left: 4px solid #2196F3; }
+        .progress-bar { width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #2196F3, #4CAF50); width: 0%; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗺️ ZIP Code Territory Map - Real ZCTA Boundaries</h1>
+        
+        <div class="controls">
+            <div class="instructions">
+                <h3>📍 Professional Territory Mapping - All 50 States</h3>
+                <ul>
+                    <li><strong>Real Boundaries:</strong> Uses actual Census ZCTA polygon data</li>
+                    <li><strong>Fast Loading:</strong> Data hosted on GitHub Pages</li>
+                    <li><strong>CSV Format:</strong> Zip Code, Territory, Color</li>
+                    <li><strong>All Colors Supported:</strong> Named colors or hex codes (#FF0000)</li>
+                </ul>
+            </div>
+            
+            <div class="file-upload-area" onclick="document.getElementById('csvFile').click()">
+                <div class="upload-icon">📁</div>
+                <div style="font-size: 16px; color: #666;">Click to upload CSV or drag and drop here</div>
+                <input type="file" id="csvFile" accept=".csv">
+                <button type="button" class="upload-button" onclick="event.stopPropagation(); document.getElementById('csvFile').click()">Choose File</button>
+                <div id="fileName" style="margin-top: 10px; color: #666; font-size: 14px;"></div>
+            </div>
+            
+            <button class="clear" onclick="clearAll()">Clear Map</button>
+            
+            <div id="message"></div>
+            <div id="progress" style="display: none;">
+                <div style="margin-bottom: 5px; font-size: 14px; color: #666;" id="progressText"></div>
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            </div>
+        </div>
+        
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card"><h3>ZIP Codes</h3><div class="number" id="totalZips">0</div></div>
+            <div class="stat-card"><h3>Territories</h3><div class="number" id="totalTerritories">0</div></div>
+            <div class="stat-card"><h3>Loaded</h3><div class="number" id="mappedZips">0</div></div>
+            <div class="stat-card"><h3>Time</h3><div class="number" id="processTime">0s</div></div>
+        </div>
+        
+        <div style="position: relative; max-width: 1600px; margin: 0 auto 15px auto;">
+            <div class="search-box"><input type="text" id="searchBox" placeholder="🔍 Search for a city or address..." /></div>
+            <div id="map"></div>
+        </div>
+        
+        <div class="legend" id="legend" style="display: none;">
+            <h3>📍 Territory Legend</h3>
+            <div class="legend-items" id="legendItems"></div>
+        </div>
+    </div>
+
+    <script>
+        let map, zipPolygons = [], zipData = [], territoryStats = {}, startTime;
+        const stateCache = {};
+        
+        const colorMap = {
+            'red': '#E74C3C', 'blue': '#3498DB', 'green': '#2ECC71', 'yellow': '#F39C12',
+            'orange': '#E67E22', 'purple': '#9B59B6', 'pink': '#FF69B4', 'brown': '#8B4513',
+            'cyan': '#17A2B8', 'magenta': '#E91E63', 'lime': '#00FF00', 'navy': '#34495E',
+            'teal': '#1ABC9C', 'olive': '#808000', 'maroon': '#800000', 'gray': '#95A5A6',
+            'grey': '#95A5A6', 'indigo': '#6610F2', 'violet': '#8B00FF'
+        };
+        
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 4,
+                center: { lat: 39.8283, lng: -98.5795 },
+                mapTypeId: 'roadmap'
+            });
+            
+            const searchInput = document.getElementById('searchBox');
+            const searchBox = new google.maps.places.Autocomplete(searchInput);
+            searchBox.bindTo('bounds', map);
+            
+            searchBox.addListener('place_changed', () => {
+                const place = searchBox.getPlace();
+                if (!place.geometry || !place.geometry.location) {
+                    showMessage('❌ No details available', 'error');
+                    return;
+                }
+                if (place.geometry.viewport) map.fitBounds(place.geometry.viewport);
+                else { map.setCenter(place.geometry.location); map.setZoom(12); }
+                showMessage(`✅ Found: ${place.formatted_address}`, 'success');
+            });
+            
+            const fileInput = document.getElementById('csvFile');
+            const uploadArea = document.querySelector('.file-upload-area');
+            fileInput.addEventListener('change', e => handleFileSelection(e.target.files[0]));
+            uploadArea.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
+            uploadArea.addEventListener('drop', e => {
+                e.preventDefault(); e.stopPropagation();
+                if (e.dataTransfer.files.length > 0) handleFileSelection(e.dataTransfer.files[0]);
+            });
+        }
+        
+        function handleFileSelection(file) {
+            if (!file || !file.name.endsWith('.csv')) {
+                showMessage('❌ Please upload a CSV file', 'error');
+                return;
+            }
+            document.getElementById('fileName').textContent = `Selected: ${file.name}`;
+            showMessage('📖 Reading CSV...', 'info');
+            startTime = Date.now();
+            const reader = new FileReader();
+            reader.onload = e => parseAndMapCSV(e.target.result);
+            reader.onerror = () => showMessage('❌ Error reading file', 'error');
+            reader.readAsText(file);
+        }
+        
+        function parseAndMapCSV(text) {
+            const lines = text.split('\n');
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const parts = (line.includes('\t') ? line.split('\t') : line.split(',')).map(p => p.trim().replace(/^"|"$/g, ''));
+                if (parts.length >= 3 && /^\d{5}$/.test(parts[0])) {
+                    data.push({ zip: parts[0], territory: parts[1], color: getColor(parts[2]) });
+                }
+            }
+            if (data.length === 0) {
+                showMessage('❌ No valid ZIP codes found!', 'error');
+                return;
+            }
+            zipData = data;
+            const states = new Set(data.map(d => getStateFromZip(d.zip)).filter(s => s));
+            showMessage(`⚡ Found ${data.length} ZIPs across ${states.size} states. Loading...`, 'info');
+            setTimeout(renderZipCodes, 300);
+        }
+        
+        function getColor(colorName) {
+            if (!colorName) return '#3498DB';
+            const lower = colorName.toLowerCase().trim();
+            return colorName.startsWith('#') ? colorName : (colorMap[lower] || '#3498DB');
+        }
+        
+        async function renderZipCodes() {
+            clearMap();
+            territoryStats = {};
+            const total = zipData.length;
+            let mapped = 0;
+            
+            document.getElementById('stats').style.display = 'grid';
+            document.getElementById('totalZips').textContent = total;
+            document.getElementById('totalTerritories').textContent = new Set(zipData.map(d => d.territory)).size;
+            zipData.forEach(item => {
+                if (!territoryStats[item.territory]) territoryStats[item.territory] = { color: item.color, count: 0 };
+                territoryStats[item.territory].count++;
+            });
+            document.getElementById('progress').style.display = 'block';
+            
+            const zipsByState = {};
+            for (const item of zipData) {
+                const stateCode = getStateFromZip(item.zip);
+                if (stateCode) {
+                    if (!zipsByState[stateCode]) zipsByState[stateCode] = [];
+                    zipsByState[stateCode].push(item);
+                }
+            }
+            
+            const stateCount = Object.keys(zipsByState).length;
+            showMessage(`📥 Loading ${stateCount} state(s) from GitHub...`, 'info');
+            
+            for (const [stateCode, zips] of Object.entries(zipsByState)) {
+                try {
+                    let geojson = stateCache[stateCode];
+                    
+                    if (!geojson) {
+                        const stateName = getStateName(stateCode);
+                        if (!stateName) continue;
+                        
+                        const url = `https://khaledelmasri.github.io/zipcode-mapper/data/${stateCode.toLowerCase()}_${stateName}_zip_codes_geo.min.json`;
+                        const response = await fetch(url);
+                        
+                        if (response.ok) {
+                            geojson = await response.json();
+                            stateCache[stateCode] = geojson;
+                            console.log(`✅ Loaded ${stateCode}`);
+                        } else {
+                            console.error(`❌ Failed to load ${stateCode}: ${response.status}`);
+                            continue;
+                        }
+                    }
+                    
+                    if (geojson) {
+                        zips.forEach(item => {
+                            const feature = geojson.features.find(f => 
+                                f.properties.ZCTA5CE10 === item.zip || 
+                                f.properties.GEOID10 === item.zip ||
+                                f.properties.ZIP === item.zip
+                            );
+                            
+                            if (feature) {
+                                const polygon = new google.maps.Data();
+                                polygon.addGeoJson({ type: 'FeatureCollection', features: [feature] });
+                                polygon.setMap(map);
+                                
+                                const originalColor = item.color;
+                                
+                                polygon.setStyle({
+                                    fillColor: originalColor,
+                                    fillOpacity: 0.6,
+                                    strokeColor: originalColor,
+                                    strokeWeight: 2,
+                                    strokeOpacity: 0.9
+                                });
+                                
+                                polygon.addListener('click', (event) => {
+                                    const infoWindow = new google.maps.InfoWindow({
+                                        content: `<div style="padding:10px"><strong>ZIP Code:</strong> ${item.zip}<br><strong>Territory:</strong> ${item.territory}<br><strong>State:</strong> ${stateCode}<br><div style="width:100%;height:30px;background:${originalColor};border:2px solid white;margin-top:8px;border-radius:4px;"></div></div>`,
+                                        position: event.latLng
+                                    });
+                                    infoWindow.open(map);
+                                });
+                                
+                                polygon.addListener('mouseover', () => {
+                                    polygon.setStyle({ fillColor: originalColor, fillOpacity: 0.85, strokeColor: originalColor, strokeWeight: 3, strokeOpacity: 1 });
+                                });
+                                
+                                polygon.addListener('mouseout', () => {
+                                    polygon.setStyle({ fillColor: originalColor, fillOpacity: 0.6, strokeColor: originalColor, strokeWeight: 2, strokeOpacity: 0.9 });
+                                });
+                                
+                                zipPolygons.push(polygon);
+                                mapped++;
+                            }
+                        });
+                    }
+                    
+                    const progress = (Object.keys(zipsByState).indexOf(stateCode) + 1) / stateCount * 100;
+                    document.getElementById('progressFill').style.width = progress + '%';
+                    document.getElementById('progressText').textContent = `Loading: ${mapped}/${total}`;
+                    document.getElementById('mappedZips').textContent = mapped;
+                    
+                } catch (error) {
+                    console.error(`Error loading ${stateCode}:`, error);
+                }
+            }
+            
+            finishRendering(mapped, total);
+        }
+        
+        function getStateFromZip(zip) {
+            const prefix = parseInt(zip.substring(0, 3));
+            if (prefix >= 350 && prefix <= 369) return 'AL';
+            if (prefix >= 995 && prefix <= 999) return 'AK';
+            if (prefix >= 850 && prefix <= 865) return 'AZ';
+            if (prefix >= 716 && prefix <= 729) return 'AR';
+            if (prefix >= 900 && prefix <= 961) return 'CA';
+            if (prefix >= 800 && prefix <= 816) return 'CO';
+            if (prefix >= 60 && prefix <= 69) return 'CT';
+            if (prefix >= 197 && prefix <= 199) return 'DE';
+            if (prefix >= 320 && prefix <= 349) return 'FL';
+            if (prefix >= 300 && prefix <= 319) return 'GA';
+            if (prefix >= 967 && prefix <= 968) return 'HI';
+            if (prefix >= 832 && prefix <= 838) return 'ID';
+            if (prefix >= 600 && prefix <= 629) return 'IL';
+            if (prefix >= 460 && prefix <= 479) return 'IN';
+            if (prefix >= 500 && prefix <= 528) return 'IA';
+            if (prefix >= 660 && prefix <= 679) return 'KS';
+            if (prefix >= 400 && prefix <= 427) return 'KY';
+            if (prefix >= 700 && prefix <= 714) return 'LA';
+            if (prefix >= 39 && prefix <= 49) return 'ME';
+            if (prefix >= 206 && prefix <= 219) return 'MD';
+            if (prefix >= 10 && prefix <= 27) return 'MA';
+            if (prefix >= 480 && prefix <= 499) return 'MI';
+            if (prefix >= 550 && prefix <= 567) return 'MN';
+            if (prefix >= 386 && prefix <= 397) return 'MS';
+            if (prefix >= 630 && prefix <= 658) return 'MO';
+            if (prefix >= 590 && prefix <= 599) return 'MT';
+            if (prefix >= 680 && prefix <= 693) return 'NE';
+            if (prefix >= 889 && prefix <= 898) return 'NV';
+            if (prefix >= 30 && prefix <= 38) return 'NH';
+            if (prefix >= 70 && prefix <= 89) return 'NJ';
+            if (prefix >= 870 && prefix <= 884) return 'NM';
+            if (prefix >= 100 && prefix <= 149) return 'NY';
+            if (prefix >= 270 && prefix <= 289) return 'NC';
+            if (prefix >= 580 && prefix <= 588) return 'ND';
+            if (prefix >= 430 && prefix <= 458) return 'OH';
+            if (prefix >= 730 && prefix <= 749) return 'OK';
+            if (prefix >= 970 && prefix <= 979) return 'OR';
+            if (prefix >= 150 && prefix <= 196) return 'PA';
+            if (prefix >= 28 && prefix <= 29) return 'RI';
+            if (prefix >= 290 && prefix <= 299) return 'SC';
+            if (prefix >= 570 && prefix <= 577) return 'SD';
+            if (prefix >= 370 && prefix <= 385) return 'TN';
+            if (prefix >= 750 && prefix <= 799) return 'TX';
+            if (prefix >= 840 && prefix <= 847) return 'UT';
+            if (prefix >= 50 && prefix <= 59) return 'VT';
+            if (prefix >= 220 && prefix <= 246) return 'VA';
+            if (prefix >= 980 && prefix <= 994) return 'WA';
+            if (prefix >= 247 && prefix <= 268) return 'WV';
+            if (prefix >= 530 && prefix <= 549) return 'WI';
+            if (prefix >= 820 && prefix <= 831) return 'WY';
+            return null;
+        }
+        
+        function getStateName(code) {
+            const names = {
+                'AL': 'alabama', 'AK': 'alaska', 'AZ': 'arizona', 'AR': 'arkansas',
+                'CA': 'california', 'CO': 'colorado', 'CT': 'connecticut', 'DE': 'delaware',
+                'FL': 'florida', 'GA': 'georgia', 'HI': 'hawaii', 'ID': 'idaho',
+                'IL': 'illinois', 'IN': 'indiana', 'IA': 'iowa', 'KS': 'kansas',
+                'KY': 'kentucky', 'LA': 'louisiana', 'ME': 'maine', 'MD': 'maryland',
+                'MA': 'massachusetts', 'MI': 'michigan', 'MN': 'minnesota', 'MS': 'mississippi',
+                'MO': 'missouri', 'MT': 'montana', 'NE': 'nebraska', 'NV': 'nevada',
+                'NH': 'new_hampshire', 'NJ': 'new_jersey', 'NM': 'new_mexico', 'NY': 'new_york',
+                'NC': 'north_carolina', 'ND': 'north_dakota', 'OH': 'ohio', 'OK': 'oklahoma',
+                'OR': 'oregon', 'PA': 'pennsylvania', 'RI': 'rhode_island', 'SC': 'south_carolina',
+                'SD': 'south_dakota', 'TN': 'tennessee', 'TX': 'texas', 'UT': 'utah',
+                'VT': 'vermont', 'VA': 'virginia', 'WA': 'washington', 'WV': 'west_virginia',
+                'WI': 'wisconsin', 'WY': 'wyoming'
+            };
+            return names[code] || null;
+        }
+        
+        function finishRendering(mapped, total) {
+            const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+            document.getElementById('processTime').textContent = duration + 's';
+            document.getElementById('progress').style.display = 'none';
+            showMessage(`✅ Mapped ${mapped}/${total} ZIPs with real boundaries in ${duration}s!`, 'success');
+            updateLegend();
+            
+            if (zipPolygons.length > 0) {
+                const bounds = new google.maps.LatLngBounds();
+                zipPolygons.forEach(poly => {
+                    poly.forEach(feature => {
+                        feature.getGeometry().forEachLatLng(latlng => bounds.extend(latlng));
+                    });
+                });
+                map.fitBounds(bounds);
+            }
+        }
+        
+        function updateLegend() {
+            document.getElementById('legend').style.display = 'block';
+            document.getElementById('legendItems').innerHTML = Object.entries(territoryStats)
+                .sort((a, b) => b[1].count - a[1].count)
+                .map(([territory, data]) => `<div class="legend-item"><div class="color-box" style="background: ${data.color};"></div><div><strong>${territory}</strong><div style="color:#666;font-size:12px;">${data.count} ZIP${data.count !== 1 ? 's' : ''}</div></div></div>`).join('');
+        }
+        
+        function clearMap() {
+            zipPolygons.forEach(poly => poly.setMap(null));
+            zipPolygons = [];
+        }
+        
+        function clearAll() {
+            clearMap();
+            zipData = [];
+            territoryStats = {};
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('legend').style.display = 'none';
+            document.getElementById('csvFile').value = '';
+            document.getElementById('fileName').textContent = '';
+            document.getElementById('progress').style.display = 'none';
+            map.setCenter({ lat: 39.8283, lng: -98.5795 });
+            map.setZoom(4);
+            showMessage('🗑️ Map cleared', 'success');
+        }
+        
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.className = 'message ' + type;
+            msg.textContent = text;
+            msg.style.display = 'block';
+            if (type === 'success') setTimeout(() => msg.style.display = 'none', 8000);
+        }
+    </script>
+    
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg&libraries=places&callback=initMap" async defer></script>
+</body>
+</html>
