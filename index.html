@@ -81,7 +81,7 @@
         </div>
         
         <div style="position: relative; max-width: 1600px; margin: 0 auto 15px auto;">
-            <div class="search-box"><input type="text" id="searchBox" placeholder="🔍 Search for a city or address..." /></div>
+            <!-- Search box temporarily disabled - will be updated to new API soon -->
             <div id="map"></div>
         </div>
         
@@ -110,20 +110,8 @@
                 mapTypeId: 'roadmap'
             });
             
-            const searchInput = document.getElementById('searchBox');
-            const searchBox = new google.maps.places.Autocomplete(searchInput);
-            searchBox.bindTo('bounds', map);
-            
-            searchBox.addListener('place_changed', () => {
-                const place = searchBox.getPlace();
-                if (!place.geometry || !place.geometry.location) {
-                    showMessage('❌ No details available', 'error');
-                    return;
-                }
-                if (place.geometry.viewport) map.fitBounds(place.geometry.viewport);
-                else { map.setCenter(place.geometry.location); map.setZoom(12); }
-                showMessage(`✅ Found: ${place.formatted_address}`, 'success');
-            });
+            // Search box temporarily disabled due to API deprecation
+            // Will be updated to new PlaceAutocompleteElement soon
             
             const fileInput = document.getElementById('csvFile');
             const uploadArea = document.querySelector('.file-upload-area');
