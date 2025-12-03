@@ -54,7 +54,7 @@
     
     <div style="position: relative; max-width: 100%;">
         <div class="search-box" id="searchBox" style="display: none;">
-            <input type="text" id="zipSearchInput" placeholder="🔍 Search ZIP Code (e.g., 90001)" />
+            <input type="text" id="zipSearchInput" placeholder="🔍 Search ZIP Code or City (e.g., 90001 or Dallas, TX)" />
             <div class="search-result" id="searchResult"></div>
         </div>
         <div id="zipInfoContainer"></div>
@@ -118,27 +118,25 @@
             const searchInput = document.getElementById('zipSearchInput');
             
             searchInput.addEventListener('keyup', function(e) {
-                const zip = this.value.trim();
+                const query = this.value.trim();
                 const resultDiv = document.getElementById('searchResult');
                 
-                if (zip.length === 5 && /^\d{5}$/.test(zip)) {
-                    // Find this ZIP in our data
+                // Check if it's a 5-digit ZIP code
+                if (query.length === 5 && /^\d{5}$/.test(query)) {
                     const zipDataGlobal = window.zipDataGlobal || [];
-                    const found = zipDataGlobal.find(z => z.zip === zip);
+                    const found = zipDataGlobal.find(z => z.zip === query);
                     
                     if (found) {
                         resultDiv.innerHTML = `<span style="color: #2e7d32;">✓ ${found.territory} - ${found.color === '#E74C3C' ? 'Territory A' : 'Territory B'}</span>`;
-                        
-                        // Find and zoom to this ZIP if loaded
-                        const state = getStateFromZip(zip);
+                        const state = getStateFromZip(query);
                         if (state) {
                             resultDiv.innerHTML += ` (${state})`;
                         }
                     } else {
                         resultDiv.innerHTML = '<span style="color: #c62828;">✗ ZIP not in territories</span>';
                     }
-                } else if (zip.length > 0) {
-                    resultDiv.innerHTML = '<span style="color: #666;">Enter 5-digit ZIP code</span>';
+                } else if (query.length >= 3) {
+                    resultDiv.innerHTML = '<span style="color: #666;">Press Enter to search for city</span>';
                 } else {
                     resultDiv.innerHTML = '';
                 }
@@ -146,21 +144,26 @@
             
             searchInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
-                    const zip = this.value.trim();
-                    if (zip.length === 5) {
-                        searchAndZoom(zip);
+                    const query = this.value.trim();
+                    if (query.length > 0) {
+                        searchLocation(query);
                     }
                 }
             });
         }
         
-        function searchAndZoom(zip) {
-            // Use geocoding to find ZIP location
+        function searchLocation(query) {
             const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ address: zip + ', USA' }, function(results, status) {
+            const resultDiv = document.getElementById('searchResult');
+            
+            resultDiv.innerHTML = '<span style="color: #1976D2;">Searching...</span>';
+            
+            geocoder.geocode({ address: query + ', USA' }, function(results, status) {
                 if (status === 'OK' && results[0]) {
                     map.setCenter(results[0].geometry.location);
-                    map.setZoom(12);
+                    map.setZoom(11);
+                    
+                    resultDiv.innerHTML = `<span style="color: #2e7d32;">✓ Found: ${results[0].formatted_address}</span>`;
                     
                     // Add temporary marker
                     const marker = new google.maps.Marker({
@@ -169,7 +172,13 @@
                         animation: google.maps.Animation.DROP
                     });
                     
-                    setTimeout(() => marker.setMap(null), 3000);
+                    setTimeout(() => {
+                        marker.setMap(null);
+                        resultDiv.innerHTML = '';
+                    }, 3000);
+                } else {
+                    resultDiv.innerHTML = '<span style="color: #c62828;">✗ Location not found</span>';
+                    setTimeout(() => resultDiv.innerHTML = '', 3000);
                 }
             });
         }
@@ -265,7 +274,7 @@
                         
                         updateLoading(`Loading ${stateCode} (${i+1}/${stateCount})...`);
                         
-                        const url = `https://khaledelmasri.github.io/zipcode-mapper/data/${stateCode.toLowerCase()}_${stateName}_zip_codes_geo.min.json`;
+                        const url = `https://khaledelmasri.github.io/zipcode-mapper/data_extreme/${stateCode.toLowerCase()}_${stateName}_zip_codes_geo.min.json`;
                         const response = await fetch(url);
                         
                         if (response.ok) {
