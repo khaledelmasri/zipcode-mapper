@@ -23,15 +23,6 @@
         .legend-item { display: flex; align-items: center; margin: 10px 0; }
         .legend-item .color-box { width: 30px; height: 30px; border-radius: 4px; margin-right: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .error { background: #ffebee; color: #c62828; padding: 20px; margin: 20px; border-radius: 8px; border-left: 4px solid #f44336; }
-        .search-box { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 1000; background: white; padding: 8px 12px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); width: 400px; max-width: 90%; }
-        .search-box input { width: 100%; padding: 12px 14px; border: 2px solid #2196F3; border-radius: 6px; font-size: 15px; outline: none; }
-        .search-result { margin-top: 8px; font-size: 13px; color: #666; }
-        .zip-info-banner { position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); background: white; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.3); z-index: 1000; min-width: 250px; text-align: left; }
-        .zip-info-banner .close-btn { position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 20px; color: #999; font-weight: bold; }
-        .zip-info-banner .close-btn:hover { color: #333; }
-        .zip-info-banner .zip-label { font-size: 12px; color: #666; margin-bottom: 4px; }
-        .zip-info-banner .zip-value { font-size: 18px; font-weight: 600; color: #333; margin-bottom: 12px; }
-        .zip-info-banner .color-preview { width: 100%; height: 40px; border-radius: 4px; margin-top: 8px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
@@ -52,14 +43,7 @@
         <div id="loadingText">Loading territory data...</div>
     </div>
     
-    <div style="position: relative; max-width: 100%;">
-        <div class="search-box" id="searchBox" style="display: none;">
-            <input type="text" id="zipSearchInput" placeholder="🔍 Search ZIP Code or City (e.g., 90001 or Dallas, TX)" />
-            <div class="search-result" id="searchResult"></div>
-        </div>
-        <div id="zipInfoContainer"></div>
-        <div id="map" style="display: none;"></div>
-    </div>
+    <div id="map" style="display: none;"></div>
     
     <div class="legend" id="legend" style="display: none;">
         <h3>📍 Territory Legend</h3>
@@ -78,28 +62,6 @@
         let map, zipPolygons = [];
         const stateCache = {};
         
-        function showZipBanner(zipCode, territory, state, color) {
-            // Remove any existing banner
-            const container = document.getElementById('zipInfoContainer');
-            container.innerHTML = '';
-            
-            // Create new banner
-            const banner = document.createElement('div');
-            banner.className = 'zip-info-banner';
-            banner.innerHTML = `
-                <span class="close-btn" onclick="this.parentElement.remove()">×</span>
-                <div class="zip-label">ZIP Code</div>
-                <div class="zip-value">${zipCode}</div>
-                <div class="zip-label">Territory</div>
-                <div class="zip-value">${territory}</div>
-                <div class="zip-label">State</div>
-                <div class="zip-value">${state}</div>
-                <div class="color-preview" style="background: ${color};"></div>
-            `;
-            
-            container.appendChild(banner);
-        }
-        
         function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 4,
@@ -107,80 +69,8 @@
                 mapTypeId: 'roadmap'
             });
             
-            // Setup search box
-            setupSearch();
-            
             // Auto-load data
             loadTerritoryData();
-        }
-        
-        function setupSearch() {
-            const searchInput = document.getElementById('zipSearchInput');
-            
-            searchInput.addEventListener('keyup', function(e) {
-                const query = this.value.trim();
-                const resultDiv = document.getElementById('searchResult');
-                
-                // Check if it's a 5-digit ZIP code
-                if (query.length === 5 && /^\d{5}$/.test(query)) {
-                    const zipDataGlobal = window.zipDataGlobal || [];
-                    const found = zipDataGlobal.find(z => z.zip === query);
-                    
-                    if (found) {
-                        resultDiv.innerHTML = `<span style="color: #2e7d32;">✓ ${found.territory} - ${found.color === '#E74C3C' ? 'Territory A' : 'Territory B'}</span>`;
-                        const state = getStateFromZip(query);
-                        if (state) {
-                            resultDiv.innerHTML += ` (${state})`;
-                        }
-                    } else {
-                        resultDiv.innerHTML = '<span style="color: #c62828;">✗ ZIP not in territories</span>';
-                    }
-                } else if (query.length >= 3) {
-                    resultDiv.innerHTML = '<span style="color: #666;">Press Enter to search for city</span>';
-                } else {
-                    resultDiv.innerHTML = '';
-                }
-            });
-            
-            searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    const query = this.value.trim();
-                    if (query.length > 0) {
-                        searchLocation(query);
-                    }
-                }
-            });
-        }
-        
-        function searchLocation(query) {
-            const geocoder = new google.maps.Geocoder();
-            const resultDiv = document.getElementById('searchResult');
-            
-            resultDiv.innerHTML = '<span style="color: #1976D2;">Searching...</span>';
-            
-            geocoder.geocode({ address: query + ', USA' }, function(results, status) {
-                if (status === 'OK' && results[0]) {
-                    map.setCenter(results[0].geometry.location);
-                    map.setZoom(11);
-                    
-                    resultDiv.innerHTML = `<span style="color: #2e7d32;">✓ Found: ${results[0].formatted_address}</span>`;
-                    
-                    // Add temporary marker
-                    const marker = new google.maps.Marker({
-                        map: map,
-                        position: results[0].geometry.location,
-                        animation: google.maps.Animation.DROP
-                    });
-                    
-                    setTimeout(() => {
-                        marker.setMap(null);
-                        resultDiv.innerHTML = '';
-                    }, 3000);
-                } else {
-                    resultDiv.innerHTML = '<span style="color: #c62828;">✗ Location not found</span>';
-                    setTimeout(() => resultDiv.innerHTML = '', 3000);
-                }
-            });
         }
         
         async function loadTerritoryData() {
@@ -233,9 +123,6 @@
                 }
             }
             
-            // Store globally for search
-            window.zipDataGlobal = data;
-            
             return data;
         }
         
@@ -274,9 +161,7 @@
                         
                         updateLoading(`Loading ${stateCode} (${i+1}/${stateCount})...`);
                         
-                        const url = `https://khaledelmasri.github.io/zipcode-mapper/data_extreme/${stateCode.toLowerCase()}_${stateName}_zip_codes_geo.min.json`;
-                        const response = await fetch(url);
-                        
+const url = `https://khaledelmasri.github.io/zipcode-mapper/data_extreme/${stateCode.toLowerCase()}_${stateName}_zip_codes_geo.min.json`;                        
                         if (response.ok) {
                             geojson = await response.json();
                             stateCache[stateCode] = geojson;
@@ -315,7 +200,11 @@
                                 });
                                 
                                 polygon.addListener('click', (event) => {
-                                    showZipBanner(item.zip, item.territory, stateCode, originalColor);
+                                    const infoWindow = new google.maps.InfoWindow({
+                                        content: `<div style="padding:10px"><strong>ZIP Code:</strong> ${item.zip}<br><strong>Territory:</strong> ${item.territory}<br><strong>State:</strong> ${stateCode}<br><div style="width:100%;height:30px;background:${originalColor};border:2px solid white;margin-top:8px;border-radius:4px;"></div></div>`,
+                                        position: event.latLng
+                                    });
+                                    infoWindow.open(map);
                                 });
                                 
                                 polygon.addListener('mouseover', () => {
@@ -346,7 +235,6 @@
             // Hide loading, show map
             document.getElementById('loading').style.display = 'none';
             document.getElementById('map').style.display = 'block';
-            document.getElementById('searchBox').style.display = 'block';
             document.getElementById('legend').style.display = 'block';
             document.getElementById('stats').style.display = 'grid';
             
