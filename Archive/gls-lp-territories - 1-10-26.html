@@ -243,16 +243,19 @@
             let mapped = 0;
             let territoryACount = zipData.length;
             
-            updateLoading(`🗺️ Loading ${stateCount} states in parallel...`);
+            updateLoading(`🗺️ Loading ${stateCount} states...`);
             
-            // Load all state GeoJSON files in parallel
-            const loadPromises = stateCodes.map(async (stateCode) => {
+            for (let i = 0; i < stateCodes.length; i++) {
+                const stateCode = stateCodes[i];
+                
                 try {
                     let geojson = stateCache[stateCode];
                     
                     if (!geojson) {
                         const stateName = getStateName(stateCode);
-                        if (!stateName) return null;
+                        if (!stateName) continue;
+                        
+                        updateLoading(`Loading ${stateCode} (${i+1}/${stateCount})...`);
                         
                         const url = `https://khaledelmasri.github.io/zipcode-mapper/data_simplified/${stateCode.toLowerCase()}_${stateName}_zip_codes_geo.min.json`;
                         const response = await fetch(url);
@@ -260,30 +263,16 @@
                         if (response.ok) {
                             geojson = await response.json();
                             stateCache[stateCode] = geojson;
-                            return { stateCode, geojson };
+                        } else {
+                            continue;
                         }
-                    } else {
-                        return { stateCode, geojson };
+                        
+                        await new Promise(resolve => setTimeout(resolve, 100));
                     }
                     
-                    return null;
-                } catch (error) {
-                    console.error(`Error loading ${stateCode}:`, error);
-                    return null;
-                }
-            });
-            
-            // Wait for all states to load
-            const loadedStates = await Promise.allSettled(loadPromises);
-            
-            // Now render all the ZIP codes
-            updateLoading(`Rendering ZIP codes...`);
-            
-            for (const result of loadedStates) {
-                if (result.status === 'fulfilled' && result.value) {
-                    const { stateCode, geojson } = result.value;
-                    
-                    if (geojson && zipsByState[stateCode]) {
+                    if (geojson) {
+                        updateLoading(`Rendering ${stateCode} ZIP codes...`);
+                        
                         const zips = zipsByState[stateCode];
                         
                         for (const item of zips) {
@@ -325,6 +314,9 @@
                             }
                         }
                     }
+                    
+                } catch (error) {
+                    console.error(`Error loading ${stateCode}:`, error);
                 }
             }
             
